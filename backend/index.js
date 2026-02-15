@@ -21,12 +21,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 const corsOptions = {
-    origin: 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true
 }
 
 app.use(cors(corsOptions));
-// Trigger restart for config update
 
 const PORT = process.env.PORT || 5000;
 
@@ -48,7 +47,15 @@ io.on("connection", (socket) => {
 
 
 
-server.listen(PORT, () => {
-    connectDB();
-    console.log(`Server running at port ${PORT}`);
-});
+// Connect to database
+connectDB();
+
+// Start server (only if not in serverless environment)
+if (process.env.VERCEL !== '1') {
+    server.listen(PORT, () => {
+        console.log(`Server running at port ${PORT}`);
+    });
+}
+
+// Export for Vercel serverless
+export default app;

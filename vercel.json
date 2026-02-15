@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/index.js"
+    },
+    {
+      "src": "/socket.io/(.*)",
+      "dest": "backend/index.js"
+    },
+    {
+      "src": "/(.*\\.(js|css|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
+      "dest": "/frontend/dist/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/dist/index.html"
+    }
+  ],
+  "outputDirectory": "frontend/dist",
+  "framework": null,
+  "installCommand": "npm install --prefix backend && npm install --prefix frontend",
+  "buildCommand": "npm run build --prefix frontend"
+}
