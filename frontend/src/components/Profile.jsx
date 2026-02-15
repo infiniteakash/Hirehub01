@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Navbar from './shared/Navbar'
 import { Avatar, AvatarImage } from './ui/avatar'
 import { Button } from './ui/button'
@@ -9,6 +9,8 @@ import AppliedJobTable from './AppliedJobTable'
 import UpdateProfileDialog from './UpdateProfileDialog'
 import { useSelector } from 'react-redux'
 import useGetAppliedJobs from '@/hooks/useGetAppliedJobs'
+import axios from 'axios'
+import { RESUME_DOWNLOAD_END_POINT, RESUME_LIST_END_POINT } from '@/utils/constant'
 
 // const skills = ["Html", "Css", "Javascript", "Reactjs"]
 const isResume = true;
@@ -16,7 +18,45 @@ const isResume = true;
 const Profile = () => {
     useGetAppliedJobs();
     const [open, setOpen] = useState(false);
+    const [resumes, setResumes] = useState([]);
     const {user} = useSelector(store=>store.auth);
+
+    useEffect(() => {
+        const fetchResumes = async () => {
+            try {
+                const res = await axios.get(RESUME_LIST_END_POINT, { withCredentials: true });
+                if (res.data.success) {
+                    setResumes(res.data.resumes || []);
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        };
+
+        if (user) {
+            fetchResumes();
+        }
+    }, [user]);
+
+    const handleDownload = async (resume) => {
+        if (!resume?.fileId) return;
+        try {
+            const res = await axios.get(`${RESUME_DOWNLOAD_END_POINT}/${resume.fileId}`, {
+                withCredentials: true,
+                responseType: "blob"
+            });
+            const blobUrl = window.URL.createObjectURL(res.data);
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = resume.filename || "resume";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.log(error);
+        }
+    };
 
     return (
         <div>
@@ -63,6 +103,29 @@ const Profile = () => {
                 <h1 className='font-bold text-lg my-5'>Applied Jobs</h1>
                 {/* Applied Job Table   */}
                 <AppliedJobTable />
+            </div>
+            <div className='max-w-4xl mx-auto bg-white border border-gray-200 rounded-2xl my-5 p-8'>
+                <h1 className='font-bold text-lg mb-4'>Resume history</h1>
+                {resumes.length > 0 ? (
+                    <div className='space-y-3'>
+                        {resumes.map((resume) => (
+                            <div key={resume._id} className='flex flex-col gap-2 rounded-xl border border-gray-100 p-4 md:flex-row md:items-center md:justify-between'>
+                                <div>
+                                    <p className='font-medium text-gray-900'>{resume.filename}</p>
+                                    <p className='text-sm text-gray-500'>Saved {resume.createdAt?.split("T")[0]}</p>
+                                    <div className='mt-2 flex flex-wrap gap-2'>
+                                        {(resume.parsedData?.skills || []).slice(0, 6).map((skill) => (
+                                            <Badge key={`${resume._id}-${skill}`} variant='secondary'>{skill}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                                <Button variant='outline' onClick={() => handleDownload(resume)}>Download</Button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className='text-sm text-gray-500'>No resumes saved yet.</p>
+                )}
             </div>
             <UpdateProfileDialog open={open} setOpen={setOpen}/>
         </div>

@@ -30,6 +30,10 @@ export const registerCompany = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            success: false
+        });
     }
 }
 export const getCompany = async (req, res) => {
@@ -48,6 +52,10 @@ export const getCompany = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            success: false
+        });
     }
 }
 // get company by id
@@ -67,6 +75,10 @@ export const getCompanyById = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            success: false
+        });
     }
 }
 export const updateCompany = async (req, res) => {
@@ -76,10 +88,11 @@ export const updateCompany = async (req, res) => {
         const file = req.file;
         // idhar cloudinary ayega
         const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-        const logo = cloudResponse.secure_url;
+        const cloudResponse = fileUri ? await cloudinary.uploader.upload(fileUri.content) : null;
+        const logo = cloudResponse?.secure_url || "";
     
-        const updateData = { name, description, website, location, logo };
+        const updateData = { name, description, website, location };
+        if (logo) updateData.logo = logo;
 
         const company = await Company.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
@@ -96,5 +109,9 @@ export const updateCompany = async (req, res) => {
 
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            success: false
+        });
     }
 }

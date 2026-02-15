@@ -1,5 +1,4 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import Navbar from './components/shared/Navbar'
 import Login from './components/auth/Login'
 import Signup from './components/auth/Signup'
 import Home from './components/Home'
@@ -14,6 +13,8 @@ import AdminJobs from "./components/admin/AdminJobs";
 import PostJob from './components/admin/PostJob'
 import Applicants from './components/admin/Applicants'
 import ProtectedRoute from './components/admin/ProtectedRoute'
+import MatchNotifications from './components/MatchNotifications'
+import ResumeParser from './components/ResumeParser'
 
 
 const appRouter = createBrowserRouter([
@@ -45,6 +46,10 @@ const appRouter = createBrowserRouter([
     path: "/profile",
     element: <Profile />
   },
+  {
+    path: "/resume-parser",
+    element: <ResumeParser />
+  },
   // admin ke liye yha se start hoga
   {
     path:"/admin/companies",
@@ -70,12 +75,17 @@ const appRouter = createBrowserRouter([
     path:"/admin/jobs/:id/applicants",
     element:<ProtectedRoute><Applicants/></ProtectedRoute> 
   },
+  {
+    path: "*",
+    element: <div className="text-center mt-20"><h1 className="text-4xl font-bold">404 - Page Not Found</h1><p>The page you're looking for doesn't exist.</p></div>
+  },
 
-])
+], { future: { v7_startTransition: true } })
 function App() {
 
   return (
     <div>
+      <MatchNotifications />
       <RouterProvider router={appRouter} />
     </div>
   )

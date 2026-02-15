@@ -1,8 +1,25 @@
 import { User } from "../models/user.model.js";
+import { Resume } from "../models/resume.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
 import cloudinary from "../utils/cloudinary.js";
+import { parseResumeBuffer } from "../utils/resumeParser.js";
+import { getResumeBucket } from "../utils/gridfs.js";
+import mongoose from "mongoose";
+
+const uploadToGridFs = (bucket, file, userId) => new Promise((resolve, reject) => {
+    const uploadStream = bucket.openUploadStream(file.originalname, {
+        contentType: file.mimetype,
+        metadata: {
+            userId: userId?.toString() || ""
+        }
+    });
+
+    uploadStream.on("error", reject);
+    uploadStream.on("finish", () => resolve(uploadStream.id));
+    uploadStream.end(file.buffer);
+});
 
 export const register = async (req, res) => {
     try {
@@ -16,7 +33,15 @@ export const register = async (req, res) => {
         };
         const file = req.file;
         const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+        let cloudResponse = null;
+        if (fileUri) {
+            try {
+                cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            } catch (error) {
+                console.log("Cloudinary upload failed:", error);
+                // Continue without uploading
+            }
+        }
 
         const user = await User.findOne({ email });
         if (user) {
@@ -34,7 +59,7 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             profile:{
-                profilePhoto:cloudResponse.secure_url,
+                profilePhoto: cloudResponse?.secure_url || "",
             }
         });
 
@@ -44,6 +69,10 @@ export const register = async (req, res) => {
         });
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: error.message || "Internal server error",
+            success: false
+        });
     }
 }
 export const login = async (req, res) => {
@@ -99,6 +128,10 @@ export const login = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
     }
 }
 export const logout = async (req, res) => {
@@ -109,6 +142,10 @@ export const logout = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
     }
 }
 export const updateProfile = async (req, res) => {
@@ -118,7 +155,7 @@ export const updateProfile = async (req, res) => {
         const file = req.file;
         // cloudinary ayega idhar
         const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+        const cloudResponse = fileUri ? await cloudinary.uploader.upload(fileUri.content) : null;
 
 
 
@@ -167,5 +204,179 @@ export const updateProfile = async (req, res) => {
         })
     } catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
     }
 }
+
+export const parseResume = async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({
+                message: "Resume file is required.",
+                success: false
+            });
+        }
+
+        const allowedTypes = [
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ];
+
+        if (!allowedTypes.includes(file.mimetype)) {
+            return res.status(400).json({
+                message: "Only PDF or DOCX files are supported.",
+                success: false
+            });
+        }
+
+        const parsedData = await parseResumeBuffer(file);
+        const bucket = getResumeBucket();
+        const fileId = await uploadToGridFs(bucket, file, req.id);
+
+        return res.status(200).json({
+            success: true,
+            parsed_data: parsedData,
+            file: {
+                id: fileId?.toString ? fileId.toString() : fileId,
+                filename: file.originalname,
+                contentType: file.mimetype
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: error.message || "Failed to parse resume",
+            success: false
+        });
+    }
+};
+
+export const saveParsedResume = async (req, res) => {
+    try {
+        const { file_id, file_meta, parsed_data } = req.body;
+
+        if (!file_id || !parsed_data) {
+            return res.status(400).json({
+                message: "file_id and parsed_data are required.",
+                success: false
+            });
+        }
+
+        const resume = await Resume.create({
+            user: req.id,
+            fileId: file_id,
+            filename: file_meta?.filename || "resume",
+            contentType: file_meta?.contentType || "application/octet-stream",
+            parsedData: parsed_data,
+            skill_tags: parsed_data?.skills || []
+        });
+
+        const user = await User.findById(req.id);
+        if (user) {
+            const newSkills = Array.isArray(parsed_data?.skills) ? parsed_data.skills : [];
+            const existingProfileSkills = Array.isArray(user.profile?.skills) ? user.profile.skills : [];
+            const existingTags = Array.isArray(user.skill_tags) ? user.skill_tags : [];
+            const merged = Array.from(new Set([...existingProfileSkills, ...newSkills]));
+
+            user.profile.skills = merged;
+            user.skill_tags = Array.from(new Set([...existingTags, ...newSkills]));
+            await user.save();
+        }
+
+        return res.status(201).json({
+            success: true,
+            resume
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: error.message || "Failed to save parsed resume",
+            success: false
+        });
+    }
+};
+
+export const downloadResume = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({
+                message: "Resume id is required.",
+                success: false
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: "Invalid resume id.",
+                success: false
+            });
+        }
+
+        const resume = await Resume.findOne({ fileId: id, user: req.id });
+        if (!resume) {
+            return res.status(404).json({
+                message: "Resume not found.",
+                success: false
+            });
+        }
+
+        const bucket = getResumeBucket();
+        const fileObjectId = new mongoose.Types.ObjectId(resume.fileId);
+        const files = await bucket.find({ _id: fileObjectId }).toArray();
+
+        if (!files || files.length === 0) {
+            return res.status(404).json({
+                message: "Resume file not found.",
+                success: false
+            });
+        }
+
+        const file = files[0];
+        res.set({
+            "Content-Type": file.contentType || "application/octet-stream",
+            "Content-Disposition": `attachment; filename="${file.filename}"`
+        });
+
+        const downloadStream = bucket.openDownloadStream(fileObjectId);
+        downloadStream.on("error", (error) => {
+            console.log(error);
+            return res.status(500).json({
+                message: "Failed to download resume.",
+                success: false
+            });
+        });
+
+        downloadStream.pipe(res);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: error.message || "Failed to download resume",
+            success: false
+        });
+    }
+};
+
+export const listResumes = async (req, res) => {
+    try {
+        const resumes = await Resume.find({ user: req.id })
+            .select("fileId filename contentType parsedData createdAt")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return res.status(200).json({
+            success: true,
+            resumes: resumes || []
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            message: error.message || "Failed to fetch resumes",
+            success: false
+        });
+    }
+};

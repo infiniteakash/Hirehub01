@@ -1,4 +1,9 @@
-export const USER_API_END_POINT="http://localhost:8000/api/v1/user";
-export const JOB_API_END_POINT="http://localhost:8000/api/v1/job";
-export const APPLICATION_API_END_POINT="http://localhost:8000/api/v1/application";
-export const COMPANY_API_END_POINT="http://localhost:8000/api/v1/company";
+export const USER_API_END_POINT="http://localhost:8002/api/v1/user";
+export const JOB_API_END_POINT="http://localhost:8002/api/v1/job";
+export const APPLICATION_API_END_POINT="http://localhost:8002/api/v1/application";
+export const COMPANY_API_END_POINT="http://localhost:8002/api/v1/company";
+export const MATCH_API_END_POINT="http://localhost:8002/api/match-jobs";
+export const RESUME_PARSE_END_POINT="http://localhost:8002/api/v1/user/resume/parse";
+export const RESUME_SAVE_END_POINT="http://localhost:8002/api/v1/user/resume/save";
+export const RESUME_LIST_END_POINT="http://localhost:8002/api/v1/user/resume/list";
+export const RESUME_DOWNLOAD_END_POINT="http://localhost:8002/api/v1/user/resume/download";

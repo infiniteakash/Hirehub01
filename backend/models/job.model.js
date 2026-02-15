@@ -12,6 +12,10 @@ const jobSchema = new mongoose.Schema({
     requirements: [{
         type: String
     }],
+    skill_tags: [{
+        type: String,
+        trim: true
+    }],
     salary: {
         type: Number,
         required: true

@@ -1,19 +1,17 @@
 import React from 'react'
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import { Button } from '../ui/button'
-import { Avatar, AvatarImage } from '../ui/avatar'
-import { LogOut, User2 } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import axios from 'axios'
 import { USER_API_END_POINT } from '@/utils/constant'
 import { setUser } from '@/redux/authSlice'
 import { toast } from 'sonner'
+import PillNav from '../PillNav'
 
 const Navbar = () => {
     const { user } = useSelector(store => store.auth);
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const { pathname } = useLocation();
 
     const logoutHandler = async () => {
         try {
@@ -25,84 +23,63 @@ const Navbar = () => {
             }
         } catch (error) {
             console.log(error);
-            toast.error(error.response.data.message);
+            toast.error(error.response?.data?.message);
         }
+    };
+
+    const logoUrl = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"%3E%3Crect width="40" height="40" fill="%236A38C2" rx="8"/%3E%3Ctext x="50%25" y="50%25" font-size="20" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="middle"%3EHH%3C/text%3E%3C/svg%3E';
+
+    const getItems = () => {
+        if (user?.role === 'recruiter') {
+            return [
+                { label: 'Home', href: '/' },
+                { label: 'Companies', href: '/admin/companies' },
+                { label: 'Jobs', href: '/admin/jobs' }
+            ];
+        } else if (user?.role === 'student') {
+            return [
+                { label: 'Home', href: '/' },
+                { label: 'Jobs', href: '/jobs' },
+                { label: 'Browse', href: '/browse' },
+                { label: 'Resume', href: '/resume-parser' }
+            ];
+        } else {
+            return [
+                { label: 'Home', href: '/' },
+                { label: 'Jobs', href: '/jobs' },
+                { label: 'Browse', href: '/browse' },
+                { label: 'Login', href: '/login' }
+            ];
+        }
+    };
+
+    const items = getItems();
+    const homeItem = { label: 'HireHub', href: '/' };
+    const allItems = [homeItem, ...items];
+
+    // Add profile/logout items at the end if user is logged in
+    if (user) {
+        allItems.push({ label: 'Profile', href: '/profile' });
+        allItems.push({ label: 'Logout', href: '#', onClick: logoutHandler });
+    } else {
+        allItems.push({ label: 'Signup', href: '/signup' });
     }
+
     return (
-        <div className='bg-white'>
-            <div className='flex items-center justify-between mx-auto max-w-7xl h-16'>
-                <div>
-                    <h1 className='text-2xl font-bold'>Job<span className='text-[#F83002]'>Portal</span></h1>
-                </div>
-                <div className='flex items-center gap-12'>
-                    <ul className='flex font-medium items-center gap-5'>
-                        {
-                            user && user.role === 'recruiter' ? (
-                                <>
-                                    <li><Link to="/admin/companies">Companies</Link></li>
-                                    <li><Link to="/admin/jobs">Jobs</Link></li>
-                                </>
-                            ) : (
-                                <>
-                                    <li><Link to="/">Home</Link></li>
-                                    <li><Link to="/jobs">Jobs</Link></li>
-                                    <li><Link to="/browse">Browse</Link></li>
-                                </>
-                            )
-                        }
+        <PillNav
+            logo={logoUrl}
+            logoAlt="HireHub"
+            items={allItems}
+            activeHref={pathname}
+            className="hirehub-nav"
+            ease="power2.easeOut"
+            baseColor="#060010"
+            pillColor="#ffffff"
+            hoveredPillTextColor="#ffffff"
+            pillTextColor="#000000"
+            initialLoadAnimation={true}
+        />
+    );
+};
 
-
-                    </ul>
-                    {
-                        !user ? (
-                            <div className='flex items-center gap-2'>
-                                <Link to="/login"><Button variant="outline">Login</Button></Link>
-                                <Link to="/signup"><Button className="bg-[#6A38C2] hover:bg-[#5b30a6]">Signup</Button></Link>
-                            </div>
-                        ) : (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Avatar className="cursor-pointer">
-                                        <AvatarImage src={user?.profile?.profilePhoto} alt="@shadcn" />
-                                    </Avatar>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80">
-                                    <div className=''>
-                                        <div className='flex gap-2 space-y-2'>
-                                            <Avatar className="cursor-pointer">
-                                                <AvatarImage src={user?.profile?.profilePhoto} alt="@shadcn" />
-                                            </Avatar>
-                                            <div>
-                                                <h4 className='font-medium'>{user?.fullname}</h4>
-                                                <p className='text-sm text-muted-foreground'>{user?.profile?.bio}</p>
-                                            </div>
-                                        </div>
-                                        <div className='flex flex-col my-2 text-gray-600'>
-                                            {
-                                                user && user.role === 'student' && (
-                                                    <div className='flex w-fit items-center gap-2 cursor-pointer'>
-                                                        <User2 />
-                                                        <Button variant="link"> <Link to="/profile">View Profile</Link></Button>
-                                                    </div>
-                                                )
-                                            }
-
-                                            <div className='flex w-fit items-center gap-2 cursor-pointer'>
-                                                <LogOut />
-                                                <Button onClick={logoutHandler} variant="link">Logout</Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )
-                    }
-
-                </div>
-            </div>
-
-        </div>
-    )
-}
-
-export default Navbar
+export default Navbar;

@@ -34,6 +34,10 @@ const Signup = () => {
     }
     const submitHandler = async (e) => {
         e.preventDefault();
+        if (!input.fullname || !input.email || !input.phoneNumber || !input.password || !input.role) {
+            toast.error("Please fill in all required fields.");
+            return;
+        }
         const formData = new FormData();    //formdata object
         formData.append("fullname", input.fullname);
         formData.append("email", input.email);
@@ -56,7 +60,7 @@ const Signup = () => {
             }
         } catch (error) {
             console.log(error);
-            toast.error(error.response.data.message);
+            toast.error(error.response?.data?.message || "Something went wrong");
         } finally{
             dispatch(setLoading(false));
         }

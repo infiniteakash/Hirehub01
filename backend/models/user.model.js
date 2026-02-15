@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema({
         enum:['student','recruiter'],
         required:true
     },
+    skill_tags: [{
+        type: String,
+        trim: true
+    }],
     profile:{
         bio:{type:String},
         skills:[{type:String}],

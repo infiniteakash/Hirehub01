@@ -40,6 +40,14 @@ const PostJob = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
+        
+        // Validate all required fields
+        if (!input.title || !input.description || !input.requirements || !input.salary || 
+            !input.location || !input.jobType || !input.experience || !input.position || !input.companyId) {
+            toast.error("Please fill all fields and select a company");
+            return;
+        }
+        
         try {
             setLoading(true);
             const res = await axios.post(`${JOB_API_END_POINT}/post`, input,{
@@ -53,7 +61,8 @@ const PostJob = () => {
                 navigate("/admin/jobs");
             }
         } catch (error) {
-            toast.error(error.response.data.message);
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to post job");
         } finally{
             setLoading(false);
         }

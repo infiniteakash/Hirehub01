@@ -9,8 +9,49 @@ const companySchema = new mongoose.Schema({
     description:{
         type:String, 
     },
+    industry:{
+        type:String,
+    },
+    companySize:{
+        type:String,
+    },
+    headquarters:{
+        type:String,
+    },
+    foundedYear:{
+        type:Number,
+    },
     website:{
         type:String 
+    },
+    socialLinks:{
+        linkedin:{
+            type:String
+        },
+        twitter:{
+            type:String
+        }
+    },
+    techStack:[{
+        type:String
+    }],
+    benefits:[{
+        type:String
+    }],
+    culture:{
+        type:String
+    },
+    rating:{
+        type:Number,
+        default:0
+    },
+    totalReviews:{
+        type:Number,
+        default:0
+    },
+    openPositions:{
+        type:Number,
+        default:0
     },
     location:{
         type:String 
